@@ -5,11 +5,28 @@ import shutil
 from pathlib import Path
 
 
+def get_font_char(font):
+    from fontTools.ttLib import TTFont
+
+    data = set()
+
+    for k in TTFont(font).getBestCmap():
+        ch = chr(k)
+
+        data.add(ch)
+
+    print(len(data))
+
+    with open("chi_sim.txt", "w") as f:
+        for x in sorted(data):
+            f.write(x)
+
+
 class Train:
     def __init__(self):
         self.chi_sim = Path("chi_sim").resolve()
         self.fonts = Path("fonts").resolve()
-        self.font_name = "Source Han Serif CN"
+        self.default_font_name = "SimSun"
         self.langdata_lstm = Path("langdata_lstm").resolve()
         self.tessdata = Path("tessdata_best").resolve()
 
@@ -22,9 +39,6 @@ class Train:
             return False
 
         if not self.make_starter_traineddata():
-            return False
-
-        if not self.make_train_tif():
             return False
 
         return True
@@ -93,24 +107,30 @@ class Train:
 
         return False
 
-    def make_train_tif(self):
+    def make_train_tif(self, font_name=None):
         """
         生成train_tif文件
         """
 
+        if not font_name:
+            font_name = self.default_font_name
+
+        output = self.output.joinpath(font_name.replace(" ", ""))
+
+        self.output.mkdir(parents=True, exist_ok=True)
         self.tmp.mkdir(parents=True, exist_ok=True)
 
         cmd = 'text2image --text {} --outputbase {} --fonts_dir {} --font "{}" --ptsize 18 --fontconfig_tmpdir {}'.format(
             self.langdata_lstm.joinpath("chi_sim", "chi_sim.training_text").as_posix(),
-            self.output.joinpath("train").as_posix(),
+            output.joinpath("train").as_posix(),
             self.fonts.as_posix(),
-            self.font_name,
+            font_name,
             self.tmp.as_posix(),
         )
 
         os.system(cmd)
 
-        if self.output.joinpath("train.tif").is_file():
+        if output.joinpath("train.tif").is_file():
             print("生成train_tif文件成功")
 
             return True
@@ -119,22 +139,27 @@ class Train:
 
         return False
 
-    def make_lstm_train(self):
+    def make_lstm_train(self, font_name=None):
         """
         生成训练文件
         """
 
         os.environ["TESSDATA_PREFIX"] = self.tessdata.as_posix()
 
+        if not font_name:
+            font_name = self.default_font_name
+
+        output = self.output.joinpath(font_name.replace(" ", ""))
+
         cmd = "tesseract {} {} -l chi_sim --psm 6 {}/lstm.train".format(
-            self.output.joinpath("train.tif").as_posix(),
-            self.output.joinpath("train").as_posix(),
+            output.joinpath("train.tif").as_posix(),
+            output.joinpath("train").as_posix(),
             self.chi_sim.as_posix(),
         )
 
         os.system(cmd)
 
-        if self.output.joinpath("train.lstmf").is_file():
+        if output.joinpath("train.lstmf").is_file():
             print("生成训练文件成功")
 
             return True
@@ -157,7 +182,8 @@ class Train:
                 break
 
         with open(self.output.joinpath("train_listfile.txt").as_posix(), "w") as f:
-            f.write(self.output.joinpath("train.lstmf").as_posix() + "\n")
+            for file in self.output.glob("*/train.lstmf"):
+                f.write(file.resolve().as_posix() + "\n")
 
         cmd = 'lstmtraining --traineddata {} --net_spec "{}" --model_output {} --train_listfile {} --max_iterations 0 --target_error_rate 0.0001 --debug_interval -1'.format(
             self.output.joinpath("chi_sim", "chi_sim.traineddata").as_posix(),
@@ -177,12 +203,15 @@ class Train:
 
         return False
 
-    def make_eval(self):
+    def make_eval(self, font_name=None):
         """
         评估
         """
 
         os.environ["TESSDATA_PREFIX"] = self.tessdata.as_posix()
+
+        if not font_name:
+            font_name = self.default_font_name
 
         self.eval.mkdir(parents=True, exist_ok=True)
         self.tmp.mkdir(parents=True, exist_ok=True)
@@ -191,7 +220,7 @@ class Train:
             self.chi_sim.joinpath("eval.txt").as_posix(),
             self.eval.joinpath("eval").as_posix(),
             self.fonts.as_posix(),
-            self.font_name,
+            font_name,
             self.tmp.as_posix(),
         )
 
@@ -254,8 +283,10 @@ class Train:
 
 
 if __name__ == "__main__":
+    # get_font_char("fonts/SimSun.ttf")
+
     train = Train()
-    # train.train()
+    train.train()
 
     # train.make_lstm_train()
     # train.make_training()
