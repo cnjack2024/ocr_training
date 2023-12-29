@@ -117,7 +117,7 @@ class Train:
 
         output = self.output.joinpath(font_name.replace(" ", ""))
 
-        self.output.mkdir(parents=True, exist_ok=True)
+        output.mkdir(parents=True, exist_ok=True)
         self.tmp.mkdir(parents=True, exist_ok=True)
 
         cmd = 'text2image --text {} --outputbase {} --fonts_dir {} --font "{}" --ptsize 18 --fontconfig_tmpdir {}'.format(
@@ -285,10 +285,25 @@ class Train:
 if __name__ == "__main__":
     # get_font_char("fonts/SimSun.ttf")
 
-    train = Train()
-    train.train()
+    fonts = (
+        "SimSun",
+        "NSimSun",
+        "SimHei",
+        "FangSong",
+        "KaiTi",
+        "Microsoft YaHei",
+    )
 
-    # train.make_lstm_train()
+    train = Train()
+    # train.train()
+
+    # for font in fonts:
+    #     train.make_train_tif(font)
+    #     train.make_lstm_train(font)
+
     # train.make_training()
-    # train.make_eval()
+
+    # for font in fonts:
+    #     train.make_eval(font)
+
     # train.make_traineddata()
