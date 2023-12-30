@@ -30,6 +30,15 @@ class Train:
         self.langdata_lstm = Path("langdata_lstm").resolve()
         self.tessdata = Path("tessdata_best").resolve()
 
+        self.font_names = (
+            "SimSun",
+            "NSimSun",
+            "SimHei",
+            "FangSong",
+            "KaiTi",
+            "Microsoft YaHei",
+        )
+
         self.output = Path("output").resolve()
         self.eval = Path("eval").resolve()
         self.tmp = Path("tmp").resolve()
@@ -131,11 +140,11 @@ class Train:
         os.system(cmd)
 
         if output.joinpath("train.tif").is_file():
-            print("生成train_tif文件成功")
+            print(f"生成train_tif文件成功({font_name})")
 
             return True
 
-        print("生成train_tif文件失败")
+        print(f"生成train_tif文件失败({font_name})")
 
         return False
 
@@ -160,11 +169,11 @@ class Train:
         os.system(cmd)
 
         if output.joinpath("train.lstmf").is_file():
-            print("生成训练文件成功")
+            print(f"生成训练文件成功({font_name})")
 
             return True
 
-        print("生成训练文件失败")
+        print(f"生成训练文件失败({font_name})")
 
         return False
 
@@ -203,49 +212,51 @@ class Train:
 
         return False
 
-    def make_eval(self, font_name=None):
+    def make_eval(self):
         """
         评估
         """
 
         os.environ["TESSDATA_PREFIX"] = self.tessdata.as_posix()
 
-        if not font_name:
-            font_name = self.default_font_name
-
         self.eval.mkdir(parents=True, exist_ok=True)
         self.tmp.mkdir(parents=True, exist_ok=True)
 
-        cmd = 'text2image --text {} --outputbase {} --fonts_dir {} --font "{}" --ptsize 18 --fontconfig_tmpdir {}'.format(
-            self.chi_sim.joinpath("eval.txt").as_posix(),
-            self.eval.joinpath("eval").as_posix(),
-            self.fonts.as_posix(),
-            font_name,
-            self.tmp.as_posix(),
-        )
+        for font in self.font_names:
+            output = self.eval.joinpath(font.replace(" ", ""))
+            output.mkdir(parents=True, exist_ok=True)
 
-        os.system(cmd)
+            cmd = 'text2image --text {} --outputbase {} --fonts_dir {} --font "{}" --ptsize 18 --fontconfig_tmpdir {}'.format(
+                self.chi_sim.joinpath("eval.txt").as_posix(),
+                output.joinpath("eval").as_posix(),
+                self.fonts.as_posix(),
+                font,
+                self.tmp.as_posix(),
+            )
 
-        if not self.eval.joinpath("eval.tif").is_file():
-            print("评估失败(eval.tif)")
+            os.system(cmd)
 
-            return False
+            if not output.joinpath("eval.tif").is_file():
+                print(f"评估失败(eval.tif)({font})")
 
-        cmd = "tesseract {} {} -l chi_sim --psm 6 {}/lstm.train".format(
-            self.eval.joinpath("eval.tif").as_posix(),
-            self.eval.joinpath("eval").as_posix(),
-            self.chi_sim.as_posix(),
-        )
+                return False
 
-        os.system(cmd)
+            cmd = "tesseract {} {} -l chi_sim --psm 6 {}/lstm.train".format(
+                output.joinpath("eval.tif").as_posix(),
+                output.joinpath("eval").as_posix(),
+                self.chi_sim.as_posix(),
+            )
 
-        if not self.eval.joinpath("eval.lstmf").is_file():
-            print("评估失败(eval.lstmf)")
+            os.system(cmd)
 
-            return False
+            if not self.eval.joinpath("eval.lstmf").is_file():
+                print(f"评估失败(eval.lstmf)({font})")
+
+                return False
 
         with open(self.eval.joinpath("eval_listfile.txt").as_posix(), "w") as f:
-            f.write(self.eval.joinpath("eval.lstmf").as_posix() + "\n")
+            for file in self.eval.glob("*/eval.lstmf"):
+                f.write(file.resolve().as_posix() + "\n")
 
         cmd = "lstmeval --model {} --traineddata {} --eval_listfile {}".format(
             self.output.joinpath("output_checkpoint").as_posix(),
@@ -285,25 +296,13 @@ class Train:
 if __name__ == "__main__":
     # get_font_char("fonts/SimSun.ttf")
 
-    fonts = (
-        "SimSun",
-        "NSimSun",
-        "SimHei",
-        "FangSong",
-        "KaiTi",
-        "Microsoft YaHei",
-    )
-
     train = Train()
     # train.train()
 
-    # for font in fonts:
+    # for font in train.font_names:
     #     train.make_train_tif(font)
     #     train.make_lstm_train(font)
 
     # train.make_training()
-
-    # for font in fonts:
-    #     train.make_eval(font)
-
+    # train.make_eval(font)
     # train.make_traineddata()
