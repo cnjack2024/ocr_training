@@ -304,5 +304,5 @@ if __name__ == "__main__":
     #     train.make_lstm_train(font)
 
     # train.make_training()
-    # train.make_eval(font)
+    # train.make_eval()
     # train.make_traineddata()
