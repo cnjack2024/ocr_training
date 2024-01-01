@@ -249,7 +249,7 @@ class Train:
 
             os.system(cmd)
 
-            if not self.eval.joinpath("eval.lstmf").is_file():
+            if not output.joinpath("eval.lstmf").is_file():
                 print(f"评估失败(eval.lstmf)({font})")
 
                 return False
@@ -260,7 +260,7 @@ class Train:
 
         cmd = "lstmeval --model {} --traineddata {} --eval_listfile {}".format(
             self.output.joinpath("output_checkpoint").as_posix(),
-            self.eval.joinpath("chi_sim.traineddata").as_posix(),
+            self.output.joinpath("chi_sim", "chi_sim.traineddata").as_posix(),
             self.eval.joinpath("eval_listfile.txt"),
         )
 
@@ -277,7 +277,7 @@ class Train:
 
         cmd = "lstmtraining --stop_training --continue_from {} --traineddata {} --model_output {}".format(
             self.output.joinpath("output_checkpoint").as_posix(),
-            self.chi_sim.joinpath("chi_sim.traineddata").as_posix(),
+            self.output.joinpath("chi_sim", "chi_sim.traineddata").as_posix(),
             self.output.joinpath("chi_sim.traineddata").as_posix(),
         )
 
